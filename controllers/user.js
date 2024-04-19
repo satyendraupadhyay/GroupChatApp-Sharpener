@@ -31,3 +31,35 @@ exports.postSignup = (req, res, next) => {
         res.status(201).json({success: true , newData: data});
     })
 }
+
+exports.getSignin = (req, res, next) => {
+    res.sendFile(path.join(__dirname, '..' , 'views', 'signin.html'));
+}
+
+exports.postSignin = async (req, res) => {
+    const { email, password } = req.body;
+
+    if(!email || !password){
+        res.status(400).json({ msg: 'All fields are required' });
+        return;
+    }
+
+    try {
+        const user = await User.findOne({ where: { email: email } });
+        if(!user){
+            res.status(404).json({ msg: 'Email not registered' });
+            return;
+        }
+            const hash = user.password;
+            const match = await bcrypt.compare(password, hash);
+            if (match) {
+                res.status(200).json({ success: true, message: "User logged in successfully"});
+                return;
+            } else {
+                res.status(400).json({ success: false, message: "Password is incorrect" });
+            }
+    } catch(err){
+        console.log('POST USER LOGIN ERROR');
+        res.status(500).json({ error: err, msg: 'Could not fetch user' });
+    }
+};

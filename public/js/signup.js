@@ -23,6 +23,7 @@ signup.addEventListener('submit', (event) => {
             .then((res) => {
                 if (res.data.success) {
                     alert('Successfully signed up');
+                    window.location.href = '/user/signin';
                 }
             })
             .catch((err) => {
