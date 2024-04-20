@@ -1,6 +1,12 @@
 const path = require('path');
+require('dotenv').config();
 const User = require('../models/user');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken')
+
+function generateAccessToken(user) {
+    return jwt.sign({userId: user.id, username: user.name, email: user.email}, process.env.JWT_SECRET_KEY);
+}
 
 exports.getSignup = (req, res, next) => {
     res.sendFile(path.join(__dirname, '..' , 'views', 'signup.html'));
@@ -53,13 +59,13 @@ exports.postSignin = async (req, res) => {
             const hash = user.password;
             const match = await bcrypt.compare(password, hash);
             if (match) {
-                res.status(200).json({ success: true, message: "User logged in successfully"});
+                res.status(200).json({ success: true, message: "User logged in successfully", token: generateAccessToken(user)});
                 return;
             } else {
-                res.status(400).json({ success: false, message: "Password is incorrect" });
+                res.status(401).json({ success: false, message: "Password is incorrect" });
             }
     } catch(err){
         console.log('POST USER LOGIN ERROR');
-        res.status(500).json({ error: err, msg: 'Could not fetch user' });
+        res.status(404).json({ error: err, msg: 'Could not fetch user' });
     }
 };
