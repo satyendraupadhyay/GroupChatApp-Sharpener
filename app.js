@@ -7,7 +7,7 @@ const PORT = process.env.PORT;
 
 const bodyParser = require('body-parser');
 
-const userRoutes = require('./routes/user');
+const homeRoutes = require('./routes/home');
 const sequelize = require('./util/database');
 const { log } = require('console');
 
@@ -17,7 +17,7 @@ app.use(bodyParser.json({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static('public'));
 
-app.use('/user', userRoutes);
+app.use(homeRoutes);
 
 async function initiate() {
 try{

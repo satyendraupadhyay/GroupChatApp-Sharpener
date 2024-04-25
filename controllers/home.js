@@ -4,10 +4,20 @@ const User = require('../models/user');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken')
 
+exports.getHomepage = (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'views', 'home.html'));
+};
+
+exports.getChatpage = (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'views', 'chat.html'));
+};
+
+
 function generateAccessToken(user) {
     return jwt.sign({userId: user.id, username: user.name, email: user.email}, process.env.JWT_SECRET_KEY);
 }
 
+// Signup
 exports.getSignup = (req, res, next) => {
     res.sendFile(path.join(__dirname, '..' , 'views', 'signup.html'));
 }
@@ -38,6 +48,7 @@ exports.postSignup = (req, res, next) => {
     })
 }
 
+// Signin
 exports.getSignin = (req, res, next) => {
     res.sendFile(path.join(__dirname, '..' , 'views', 'signin.html'));
 }

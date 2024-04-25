@@ -5,11 +5,11 @@ signin.addEventListener('submit', (event) => {
       email: event.target.email.value,
       password: event.target.password.value
     }
-        axios.post(`/user/signin`, loginDetails)
+        axios.post(`/signin`, loginDetails)
         .then(res => {
           alert(res.data.message);
           localStorage.setItem('token', res.data.token);
-          window.location.href = '/expense/add-expense';
+          window.location.href = '/chat';
         })
         .catch((err) => {
           console.log(err);

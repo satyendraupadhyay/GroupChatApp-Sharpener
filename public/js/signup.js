@@ -14,16 +14,16 @@ signup.addEventListener('submit', (event) => {
         phone
     };
 
-    axios.get(`/user/check?email=${email}`)
+    axios.get(`/check?email=${email}`)
     .then((response) => {
         if (response.data.exists) {
             alert('User already exists!');
         } else {
-            axios.post(`/user/signup`, user)
+            axios.post(`/signup`, user)
             .then((res) => {
                 if (res.data.success) {
                     alert('Successfully signed up');
-                    window.location.href = '/user/signin';
+                    window.location.href = '/signin';
                 }
             })
             .catch((err) => {
