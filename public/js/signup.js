@@ -2,13 +2,13 @@ const signup = document.getElementById('signup-form');
 signup.addEventListener('submit', (event) => {
     event.preventDefault();
 
-    const name = event.target.name.value;
+    const username = event.target.name.value;
     const email = event.target.email.value;
     const password = event.target.password.value;
     const phone = event.target.phone.value;
 
     const user = {
-        name,
+        username,
         email,
         password,
         phone

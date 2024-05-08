@@ -8,7 +8,10 @@ const PORT = process.env.PORT;
 const bodyParser = require('body-parser');
 
 const homeRoutes = require('./routes/home');
+const chatRoutes = require('./routes/chat');
 const sequelize = require('./util/database');
+const Chat = require('./models/chat');
+const User = require('./models/user');
 const { log } = require('console');
 
 const app = express();
@@ -18,6 +21,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static('public'));
 
 app.use(homeRoutes);
+app.use(chatRoutes);
+
+User.hasMany(Chat);
+Chat.belongsTo(User);
 
 async function initiate() {
 try{

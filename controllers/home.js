@@ -14,7 +14,7 @@ exports.getChatpage = (req, res) => {
 
 
 function generateAccessToken(user) {
-    return jwt.sign({userId: user.id, username: user.name, email: user.email}, process.env.JWT_SECRET_KEY);
+    return jwt.sign({userId: user.id, username: user.username, email: user.email}, process.env.JWT_SECRET_KEY);
 }
 
 // Signup
@@ -38,12 +38,12 @@ exports.checkSignup = async (req, res, next) => {
 };
 
 exports.postSignup = (req, res, next) => {
-    const { name, email, password, phone } = req.body;
+    const { username, email, password, phone } = req.body;
     console.log(req.body);
     const saltRounds = 10;
     bcrypt.hash(password, saltRounds, async (err, hash) => {
         console.log(err);
-        const data = await User.create({name: name, email: email, password: hash, phone: phone });
+        const data = await User.create({username: username, email: email, password: hash, phone: phone });
         res.status(201).json({success: true , newData: data});
     })
 }

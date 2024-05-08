@@ -2,7 +2,6 @@ const token = localStorage.getItem('token');
 const decodedToken = parseJwt(token);
 const username = decodedToken.username;
 const userId = decodedToken.userId;
-const chats = localStorage.getItem('chats') ? JSON.parse(localStorage.getItem('chats')) : [];
 
 const usernameNav = document.getElementById('username-nav');
 const chatList = document.getElementById('chat-list');
@@ -13,40 +12,49 @@ function showUserInfoInDOM(){
     usernameNav.innerText = username;
 }
 
-function showUserJoinedInDOM(){
-    const li = document.createElement('li');
-    li.innerText = `${username} joined`;
-    li.id = userId;
-    li.className = 'list-group-item';
-    chatList.appendChild(li);
-    chats.push({ username, userId, message: 'joined' });
-    localStorage.setItem('chats', JSON.stringify(chats));
-}
-
-function addMessageInDOM(){
-    const li = document.createElement('li');
-    li.innerText = `${username}: ${messageInput.value}`;
-    li.id = userId;
-    li.className = 'list-group-item';
-    chatList.appendChild(li);
-    chats.push({ username, userId, message: messageInput.value });
-    localStorage.setItem('chats', JSON.stringify(chats));
-    messageInput.value = '';
-}
-
-function showMessagesInDOM(){
-    chats.forEach((chat) => {
+function addMessage() {
+    const chat = {
+        userId,
+        message: messageInput.value
+    }
+    axios.post(`/chat`, chat)
+    .then((res) => {
+        const message = res.data.message;
         const li = document.createElement('li');
-        if(chat.message === 'joined'){
-            li.innerText = `${chat.username} ${chat.message}`;
-        }else{
-            li.innerText = `${chat.username}: ${chat.message}`;
-        }
-        li.id = chat.userId;
-        li.className = 'list-group-item';
+        li.innerText = `${username}: ${message}`;
+        li.id = userId;
+        li.className = 'list-group-item bg-light';
+        li.classList.add('text-success');
         chatList.appendChild(li);
+        messageInput.value = '';
+    })
+    .catch((err) => {
+        const msg = err.response.data.msg ? err.response.data.msg : 'Could not add chat :(';
+        
+    })
+}
+
+function showMessage(){
+    axios.get(`/all-chats`)
+    .then((res) => {
+        const chats = res.data;
+        chats.forEach((chat) => {
+            const li = document.createElement('li');
+            li.innerText = `${chat.user.username}: ${chat.message}`;
+            li.id = chat.userId;
+            li.className = 'list-group-item bg-light';
+            if(username === chat.user.username){
+                li.classList.add('text-success');
+            }
+            chatList.appendChild(li);
+        });
+    })
+    .catch((err) => {
+        const msg = err.response.data.msg ? err.response.data.msg : 'Could not fetch chats :(';
+        
     });
 }
+
 
 function parseJwt (token) {
     var base64Url = token.split('.')[1];
@@ -60,7 +68,6 @@ function parseJwt (token) {
 
 window.addEventListener('DOMContentLoaded', () => {
     showUserInfoInDOM();
-    showMessagesInDOM();
-    showUserJoinedInDOM();
-    sendBtn.addEventListener('click', addMessageInDOM);
+    showMessage();
+    sendBtn.addEventListener('click', addMessage);
 });
