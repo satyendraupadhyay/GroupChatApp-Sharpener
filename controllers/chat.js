@@ -1,5 +1,7 @@
 const path = require('path');
 
+const {Op} = require('sequelize');
+
 const Chat = require('../models/chat');
 const User = require('../models/user');
 
@@ -11,9 +13,6 @@ exports.postChat = async (req, res) => {
     
         const userId = req.body.userId;
         const message = req.body.message;
-
-        console.log(userId);
-        console.log(message);
 
         if(!userId || !message){
             res.status(400).json({ msg: 'All fields are required '});
@@ -31,12 +30,15 @@ exports.postChat = async (req, res) => {
 
 exports.getAllChats = async (req, res) => {
     
-        const chats = await Chat.findAll({
-            include: [{
-                model: User,
-                attributes: ['username']
-            }]
-        });
-        res.status(200).json(chats);
+    const lastmessageid = req.query.lastmessageid;
+    const chats = await Chat.findAll({
+        where: { id: { [Op.gt]: lastmessageid } }, // id > lastmessageid
+        attributes: ['id', 'message'],
+        include: [{
+            model: User,
+            attributes: ['username']
+        }]
+    });
+    res.status(200).json(chats);
     
 }

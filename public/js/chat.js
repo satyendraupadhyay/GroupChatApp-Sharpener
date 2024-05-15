@@ -1,3 +1,5 @@
+const STORED_CHATS_LENGTH = 10;
+
 const token = localStorage.getItem('token');
 const decodedToken = parseJwt(token);
 const username = decodedToken.username;
@@ -7,9 +9,20 @@ const usernameNav = document.getElementById('username-nav');
 const chatList = document.getElementById('chat-list');
 const messageInput = document.getElementById('message');
 const sendBtn = document.getElementById('send-btn');
+const logoutBtn = document.getElementById('logout-btn');
 
 function showUserInfoInDOM(){
     usernameNav.innerText = username;
+}
+
+function showMyChatInDom(message) {
+    const li = document.createElement('li');
+    li.innerText = `${username}: ${message}`;
+    li.id = userId;
+    li.className = 'list-group-item bg-light';
+    li.classList.add('text-success');
+    chatList.appendChild(li);
+    messageInput.value = '';
 }
 
 function addMessage() {
@@ -20,39 +33,61 @@ function addMessage() {
     axios.post(`/chat`, chat)
     .then((res) => {
         const message = res.data.message;
-        const li = document.createElement('li');
-        li.innerText = `${username}: ${message}`;
-        li.id = userId;
-        li.className = 'list-group-item bg-light';
-        li.classList.add('text-success');
-        chatList.appendChild(li);
-        messageInput.value = '';
+        const messageId = res.data.id;
+        const chat = {
+            id: messageId,
+            message,
+            user: {username}
+        };
+        const oldChats = localStorage.getItem('oldChats') ? JSON.parse(localStorage.getItem('oldChats')) : [];
+        oldChats.push(chat);
+        const chats = oldChats.slice(oldChats.length - STORED_CHATS_LENGTH);
+        localStorage.setItem('oldChats', JSON.stringify(chats));
+        showMyChatInDom(message);
+
     })
     .catch((err) => {
         const msg = err.response.data.msg ? err.response.data.msg : 'Could not add chat :(';
-        
     })
 }
 
+function showChatInDOM(chat) {
+    const li = document.createElement('li');
+    li.innerText = `${chat.user.username}: ${chat.message}`;
+    li.id = chat.userId;
+    li.className = 'list-group-item bg-light';
+    if(username === chat.user.username){
+        li.classList.add('text-success');
+    }
+    chatList.appendChild(li);
+}
+
 function showMessage(){
-    axios.get(`/all-chats`)
+    const oldChats = localStorage.getItem('oldChats') ? JSON.parse(localStorage.getItem('oldChats')) : [];
+    const lastmessageid = oldChats.length > 0 ? oldChats[oldChats.length-1].id : -1;
+
+    axios.get(`/all-chats?lastmessageid=${lastmessageid}`)
     .then((res) => {
-        const chats = res.data;
+        const newChats = res.data;
+        const totalChats = [...oldChats, ...newChats];
+        const chats = totalChats.slice(totalChats.length - STORED_CHATS_LENGTH);
+        localStorage.setItem('oldChats', JSON.stringify(chats));
+        
         chats.forEach((chat) => {
-            const li = document.createElement('li');
-            li.innerText = `${chat.user.username}: ${chat.message}`;
-            li.id = chat.userId;
-            li.className = 'list-group-item bg-light';
-            if(username === chat.user.username){
-                li.classList.add('text-success');
-            }
-            chatList.appendChild(li);
+            showChatInDOM(chat)
         });
     })
     .catch((err) => {
         const msg = err.response.data.msg ? err.response.data.msg : 'Could not fetch chats :(';
         
     });
+}
+
+function logout(){
+    if(confirm('Are you sure you want to logout ?')){
+        localStorage.clear();
+        window.location.href = '/';
+    }
 }
 
 
@@ -70,4 +105,5 @@ window.addEventListener('DOMContentLoaded', () => {
     showUserInfoInDOM();
     showMessage();
     sendBtn.addEventListener('click', addMessage);
+    logoutBtn.addEventListener('click', logout);
 });
