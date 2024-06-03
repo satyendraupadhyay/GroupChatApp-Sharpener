@@ -1,0 +1,21 @@
+.left-column, .right-column {
+    padding-top: 10px; /* Adjust for any padding needed */
+}
+.card {
+    height: calc(100vh - 56px - 40px); /* Adjust height to fit within the viewport */
+    display: flex;
+    flex-direction: column;
+}
+.card-header, .card-footer {
+    flex-shrink: 0; /* Ensure header and footer do not shrink */
+}
+.card-body {
+    flex-grow: 1; /* Allow the body to grow and take available space */
+    overflow-y: auto; /* Make the body scrollable */
+}
+.chat-container {
+    height: 100%; /* Full height for the chat container */
+}
+.chat-input {
+    height: auto; /* Height of the chat input area */
+}
