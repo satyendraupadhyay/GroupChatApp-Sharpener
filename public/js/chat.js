@@ -1,24 +1,28 @@
-const STORED_CHATS_LENGTH = 10;
-
+// Decoding the Token: & save username & id
 const token = localStorage.getItem('token');
 const decodedToken = parseJwt(token);
 const username = decodedToken.username;
 const userId = decodedToken.userId;
 
+// DOM Element References:
+// Modal
+const modalFooterContainer = document.getElementById('modalFooterContainer');
+// NavBar
 const usernameNav = document.getElementById('username-nav');
-const chatList = document.getElementById('chat-list');
-const messageInput = document.getElementById('message');
-const sendBtn = document.getElementById('send-btn');
 const logoutBtn = document.getElementById('logout-btn');
 
-// Groups
-const groupList = document.getElementById('group-list');
-const chatContainer = document.getElementById('chat-container');
-const chatCardHeader = document.querySelector('.right-column .card-header');
-const newGroupForm = document.getElementById('createGroupForm');
+// Card footer send btn & chat bar
+const messageInput = document.getElementById('message');
+const sendBtn = document.getElementById('send-btn');
 
+// Groups
+const groupList = document.getElementById('group-list'); // left grp
+const chatContainer = document.getElementById('chat-container'); // right chats
+const chatCardHeader = document.querySelector('.right-column .card-header');
+const newGroupForm = document.getElementById('createGroupForm'); // modal
 const groupNameInput = document.getElementById('groupName');
 
+// Success & Error Msg Functions
 function showErrorInDOM(message) {
     const errorDiv = document.createElement('div');
     errorDiv.className = 'alert alert-danger';
@@ -43,10 +47,7 @@ function showSuccessInDOM(message) {
     }, 3000);
 }
 
-function showUserInfoInDOM() {
-    usernameNav.innerText = username;
-}
-
+// Chat Functions
 function showMyChatInDom(message) {
     const li = document.createElement('li');
     li.innerText = `${username}: ${message}`;
@@ -61,8 +62,8 @@ function addMessage() {
     const chat = {
         userId,
         message: messageInput.value
-    }
-    axios.post(`/chat`, chat)
+    };
+    axios.post(`/chat`, chat, { headers: {Authorization: token} })
         .then((res) => {
             const message = res.data.message;
             const messageId = res.data.id;
@@ -98,7 +99,7 @@ function showMessage() {
     const oldChats = localStorage.getItem('oldChats') ? JSON.parse(localStorage.getItem('oldChats')) : [];
     const lastmessageid = oldChats.length > 0 ? oldChats[oldChats.length - 1].id : -1;
 
-    axios.get(`/all-chats?lastmessageid=${lastmessageid}`)
+    axios.get(`/all-chats?lastmessageid=${lastmessageid}`, { headers: {Authorization: token} })
         .then((res) => {
             const newChats = res.data;
             const totalChats = [...oldChats, ...newChats];
@@ -115,8 +116,7 @@ function showMessage() {
         });
 }
 
-// =====================
-
+// Group Functions
 function handleGroupListClick(event) {
     // Remove 'active' class from all list items
     const listItems = groupList.querySelectorAll('.list-group-item');
@@ -135,22 +135,53 @@ function handleGroupListClick(event) {
     addMessage();
 }
 
+function showGroups() {
+    axios.get(`/user/groups`, { headers: {Authorization: token} })
+        .then((res) => {
+            const groups = res.data.groups;
+            groups.forEach((group) => {
+                addGroupInDOM(group);
+            });
+        })
+        .catch((err) => {
+            console.log(err);
+            showErrorInDOM('Could not fetch groups :(');
+        });
+}
+
 function addGroupInDOM(group) {
     const newGroupItem = document.createElement('li');
     newGroupItem.classList.add('list-group-item', 'clickable');
-    newGroupItem.textContent = group.groupName; // Use group.groupName
-    document.getElementById('group-list').appendChild(newGroupItem);
+    newGroupItem.textContent = group.groupName;
+    groupList.appendChild(newGroupItem);
     $('#createGroupModal').modal('hide');
 }
 
 function createGroup(event) {
     event.preventDefault();
+    const groupName = groupNameInput.value.trim();
+    if (!groupName) {
+        showErrorInDOM("Group name cannot be empty.");
+        return;
+    }
+
+    // Collect selected user IDs
+    const selectedUsers = [];
+    const checkboxes = document.querySelectorAll('.form-check-input');
+    checkboxes.forEach((checkbox) => {
+        if (checkbox.checked) {
+            selectedUsers.push(checkbox.id); // Assuming the id is the username or user ID
+        }
+    });
+
+    // Create the group object
     const group = {
-      groupName: groupNameInput.value
+        groupName,
+        users: selectedUsers
     };
-    axios.post(`/user/createGroup`, group)
+
+    axios.post(`/user/createGroup`, group, { headers: {Authorization: token} })
         .then((res) => {
-            console.log(res);
             const group = res.data;
             addGroupInDOM(group);
             showSuccessInDOM('Group Created!');
@@ -165,7 +196,41 @@ function createGroup(event) {
         });
 }
 
-// ======================
+function showUsersInModal() {
+    axios.get(`/user/user`, { headers: {Authorization: token} })
+        .then((res) => {
+            const users = res.data.users;
+
+            users.forEach((user) => {
+                const modalFooterFormDiv = document.createElement('div');
+                modalFooterFormDiv.className = 'form-check';
+
+                const modalFooterFormDivInput = document.createElement('input');
+                modalFooterFormDivInput.className = "form-check-input";
+                modalFooterFormDivInput.setAttribute('type', 'checkbox');
+                modalFooterFormDivInput.setAttribute('id', `${user.username}`);
+
+                const modalFooterFormDivLabel = document.createElement('label');
+                modalFooterFormDivLabel.className = 'form-check-label';
+                modalFooterFormDivLabel.setAttribute('for', `${user.username}`);
+                modalFooterFormDivLabel.textContent = user.username
+
+                modalFooterFormDiv.appendChild(modalFooterFormDivLabel);
+                modalFooterFormDiv.appendChild(modalFooterFormDivInput);
+                modalFooterContainer.appendChild(modalFooterFormDiv);
+            });
+                $('#createGroupModal').modal('hide');
+        })
+        .catch((err) => {
+            console.log(err);
+            showErrorInDOM('Could not fetch groups :(');
+        });
+}
+
+// Other Functions
+function showUserInfoInDOM() {
+    usernameNav.innerText = username;
+}
 
 function logout() {
     if (confirm('Are you sure you want to logout ?')) {
@@ -180,18 +245,22 @@ function parseJwt(token) {
     var jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
         return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
     }).join(''));
-
     return JSON.parse(jsonPayload);
 }
 
+// Event Listeners
 window.addEventListener('DOMContentLoaded', () => {
     showUserInfoInDOM();
     showMessage();
-    // sendBtn.addEventListener('click', addMessage);
+    showGroups();
+    showUsersInModal()
+    sendBtn.addEventListener('click', addMessage);
     groupList.addEventListener('click', handleGroupListClick);
     newGroupForm.addEventListener('submit', createGroup);
     logoutBtn.addEventListener('click', logout);
 
     const commonGroupItem = document.querySelector('#group-list .list-group-item:first-child');
-    commonGroupItem.click();
+    if (commonGroupItem) {
+        commonGroupItem.click();
+    }
 });
