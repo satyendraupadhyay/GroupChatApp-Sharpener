@@ -43,7 +43,7 @@
                     </div>
                     <div class="card-body chat-container">
                         <ul class="list-group" id="group-list">
-                            <li class="list-group-item clickable">Common Group</li>
+                            <!-- <li class="list-group-item clickable">Common Group</li> -->
                             <!-- Add more groups as needed -->
                         </ul>
                     </div>
@@ -51,8 +51,8 @@
             </div>
             <div class="col-9 right-column">
                 <div class="card">
-                    <div class="card-header">
-                        Chat
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <button class="btn btn-light btn-outline-dark" id="editGroupBtn">Chat</button>
                     </div>
                     <div class="card-body chat-container" id="chat-container">
                         <!-- <div class="chat-message">
@@ -65,9 +65,9 @@
                     </div>
                     <div class="card-footer chat-input">
                         <form id="chat-form">
-                            <div class="input-group">
-                                <input type="text" class="form-control" placeholder="Type your message here..." id="message">
-                                <button class="btn btn-primary" type="submit" id="send-btn">Send</button>
+                            <div class="chat-input-area d-flex align-items-center">
+                                <input type="text" id="message" class="form-control mr-2" placeholder="Type your message..." />
+                                <button id="send-btn" class="btn btn-primary">Send</button>
                             </div>
                         </form>
                     </div>

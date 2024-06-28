@@ -19,3 +19,49 @@
 .chat-input {
     height: auto; /* Height of the chat input area */
 }
+
+/* Container for the chat messages */
+.chat-container {
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Gap between messages */
+}
+
+/* Each chat message */
+.chat-message {
+    padding: 10px 15px;
+    border-radius: 15px;
+    display: inline-block;
+    max-width: 75%;
+    word-wrap: break-word;
+    background-color: #999a9b; /* Light grey background */
+}
+
+.chat-message.current-user {
+    background-color: #d1e7dd; /* Light green background for current user */
+    align-self: flex-end;
+    text-align: right;
+}
+
+.chat-message.other-user {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    align-self: flex-start;
+    text-align: left;
+}
+
+.chat-input-area {
+    padding: 10px;
+    border-top: 1px solid #ccc;
+    background-color: #f1f1f1;
+}
+
+.chat-input-area input {
+    flex: 1;
+}

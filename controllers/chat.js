@@ -13,6 +13,7 @@ exports.postChat = async (req, res) => {
     
         const userId = req.body.userId;
         const message = req.body.message;
+        const groupId = req.body.groupId;
 
         if(!userId || !message){
             res.status(400).json({ msg: 'All fields are required '});
@@ -21,7 +22,8 @@ exports.postChat = async (req, res) => {
 
         const chat = await Chat.create({
             message,
-            userId
+            userId,
+            groupId
         });
 
         res.status(200).json(chat);
@@ -29,16 +31,21 @@ exports.postChat = async (req, res) => {
 }
 
 exports.getAllChats = async (req, res) => {
-    
-    const lastmessageid = req.query.lastmessageid;
-    const chats = await Chat.findAll({
-        where: { id: { [Op.gt]: lastmessageid } }, // id > lastmessageid
-        attributes: ['id', 'message'],
-        include: [{
-            model: User,
-            attributes: ['username']
-        }]
-    });
-    res.status(200).json(chats);
-    
-}
+    const { groupId } = req.query;
+
+    try {
+        if (!groupId) {
+            return res.status(400).json({ msg: 'Group ID is required' });
+        }
+
+        const chats = await Chat.findAll({
+            where: { groupId },
+            include: [{ model: User, attributes: ['username'] }]
+        });
+
+        res.status(200).json(chats);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ msg: 'Could not fetch chats' });
+    }
+};
