@@ -7,4 +7,6 @@ const router = express.Router();
 
 router.get('/group/members', groupController.getGroupMembers);
 
+router.delete('/group/:groupId', groupController.deleteGroup);
+
 module.exports = router;

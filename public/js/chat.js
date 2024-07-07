@@ -1,400 +1,257 @@
-// Decoding the Token: & save username & id
+// Decoding the Token & saving username & id
 const token = localStorage.getItem('token');
-const decodedToken = parseJwt(token);
-const username = decodedToken.username;
-const userId = decodedToken.userId;
+const { username, userId } = parseJwt(token);
 
-// DOM Element References:
-// Modal
+// DOM Element References
 const modalFooterContainer = document.getElementById('modalFooterContainer');
-// NavBar
 const usernameNav = document.getElementById('username-nav');
 const logoutBtn = document.getElementById('logout-btn');
-
-// Chat
-const chatContainer = document.getElementById('chat-container'); // right chats
-
-// Card footer send btn & chat bar
+const chatContainer = document.getElementById('chat-container');
 const messageInput = document.getElementById('message');
 const sendBtn = document.getElementById('send-btn');
-
-// Groups
-const groupList = document.getElementById('group-list'); // left grp
+const groupList = document.getElementById('group-list');
 const editChatCardHeader = document.getElementById('editGroupBtn');
-const chatCardHeaderEditBtn = document.createElement('button'); // Edit button
-const newGroupForm = document.getElementById('createGroupForm'); // modal
+const newGroupForm = document.getElementById('createGroupForm');
 const groupNameInput = document.getElementById('groupName');
+const groupChatContainer = document.getElementById('group-chat-container');
+const groupChatCard = document.getElementById('group-chat-card');
+const groupPlaceholderImage = document.getElementById('group-placeholder-image');
 
-// Modal Buttons
-const addMemberButton = document.createElement('button');
-
-// Success & Error Msg Functions
-function showErrorInDOM(message) {
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'alert alert-danger';
-    errorDiv.role = 'alert';
-    errorDiv.innerText = message;
+// Display Functions
+function showError(message) {
+    const errorDiv = createAlertDiv('danger', message);
     document.body.appendChild(errorDiv);
-
-    setTimeout(() => {
-        errorDiv.remove();
-    }, 3000);
+    setTimeout(() => errorDiv.remove(), 3000);
 }
 
-function showSuccessInDOM(message) {
-    const successDiv = document.createElement('div');
-    successDiv.className = 'alert alert-success';
-    successDiv.role = 'alert';
-    successDiv.innerText = message;
+function showSuccess(message) {
+    const successDiv = createAlertDiv('success', message);
     document.body.appendChild(successDiv);
-
-    setTimeout(() => {
-        successDiv.remove();
-    }, 3000);
+    setTimeout(() => successDiv.remove(), 3000);
 }
 
-// Selected Group
-let selectedGroup = null; // Variable to store the currently selected group
+function createAlertDiv(type, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type}`;
+    alertDiv.role = 'alert';
+    alertDiv.innerText = message;
+    return alertDiv;
+}
+
+function toggleCardAndImage(showCard) {
+    groupChatCard.classList.toggle('d-none', !showCard);
+    groupPlaceholderImage.classList.toggle('d-none', showCard);
+}
 
 function handleGroupListClick(event) {
-    // Remove 'active' class from all list items
-    const listItems = groupList.querySelectorAll('.list-group-item');
-    listItems.forEach(item => {
-        item.classList.remove('active');
-    });
-
-    // Add 'active' class to the clicked list item
+    [...groupList.querySelectorAll('.list-group-item')].forEach(item => item.classList.remove('active'));
     const clickedItem = event.target;
     clickedItem.classList.add('active');
-
-    // Update card header of chat section with group name
-    editChatCardHeader.textContent = clickedItem.textContent;
-
-    // Save the selected group details
-    selectedGroup = {
-        id: clickedItem.dataset.groupId,
-        name: clickedItem.textContent
-    };
-
-    // Fetch and display chat messages for the selected group
-    const groupId = clickedItem.dataset.groupId;
-    showMessage(groupId); // Fetch and display messages for the selected group
+    selectedGroup = { id: clickedItem.dataset.groupId, name: clickedItem.textContent };
+    localStorage.setItem('selectedGroupId', selectedGroup.id); // Save selected group ID
+    editChatCardHeader.textContent = selectedGroup.name;
+    toggleCardAndImage(!!selectedGroup);
+    showMessages(selectedGroup.id);
 }
 
 
 function showChatInDOM(chat) {
-    const li = document.createElement('div');
-    li.className = 'chat-message'; // Use custom chat-message class
-    li.classList.add(username === chat.user.username ? 'current-user' : 'other-user');
-    li.innerHTML = `<strong>${chat.user.username}:</strong> ${chat.message}`;
-    chatContainer.appendChild(li);
+    const chatDiv = document.createElement('div');
+    chatDiv.className = `chat-message ${username === chat.user.username ? 'current-user' : 'other-user'}`;
+    chatDiv.innerHTML = `<strong>${chat.user.username}:</strong> ${chat.message}`;
+    chatContainer.appendChild(chatDiv); // Append instead of prepend
+
+    // Scroll to the bottom
+    chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-function showMyChatInDom(message) {
-    const li = document.createElement('div');
-    li.className = 'chat-message current-user'; // Use custom chat-message and current-user class
-    li.innerHTML = `<strong>${username}:</strong> ${message}`;
-    chatContainer.appendChild(li); // Append to chat container
-    messageInput.value = ''; // Clear message input after sending
+function showMyChatInDOM(message) {
+    const chatDiv = document.createElement('div');
+    chatDiv.className = 'chat-message current-user';
+    chatDiv.innerHTML = `<strong>${username}:</strong> ${message}`;
+    chatContainer.appendChild(chatDiv); // Append instead of prepend
+    messageInput.value = '';
+
+    // Scroll to the bottom
+    chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-// Function to add a new message
-function addMessage() {
-    const chat = {
-        userId,
-        message: messageInput.value,
-        groupId: selectedGroup.id
-    };
-    
+
+// Fetch & Display Functions
+function addMessage(event) {
+    event.preventDefault();
+    const chat = { userId, message: messageInput.value, groupId: selectedGroup.id };
     axios.post(`/chat`, chat, { headers: { Authorization: token } })
-        .then((res) => {
-            const message = res.data.message;
-            const messageId = res.data.id;
-            console.log(res);
-            
-            // Display the message in the chat container
-            showMyChatInDom(message);
-        })
-        .catch((err) => {
-            const msg = err.response && err.response.data && err.response.data.msg ? err.response.data.msg : 'Could not add chat :(';
-            showErrorInDOM(msg);
-        });
+        .then(res => showMyChatInDOM(res.data.message))
+        .catch(err => showError(err.response?.data?.msg || 'Could not add chat :('));
 }
 
-function showMessage(groupId) {
+function showMessages(groupId) {
     axios.get(`/all-chats?groupId=${groupId}`, { headers: { Authorization: token } })
-        .then((res) => {
-            const chats = res.data;
-
-            // Clear existing messages in chatContainer
+        .then(res => {
             chatContainer.innerHTML = '';
-
-            // Append each chat message to chatContainer
-            chats.forEach((chat) => {
-                showChatInDOM(chat);
-            });
+            res.data.forEach(showChatInDOM);
         })
-        .catch((err) => {
-            const msg = err.response && err.response.data && err.response.data.msg ? err.response.data.msg : 'Could not fetch chats :(';
-            showErrorInDOM(msg);
-        });
-}
-
-function editBtn() {
-     editBtnModel();
-    showGroupMembers();
-}
-
-function editBtnModel() {
-    if (!selectedGroup) {
-        return; // No group selected, exit the function
-    }
-
-    // Remove any existing modals to avoid duplicates
-    const existingModal = document.getElementById('editGroupModal');
-    if (existingModal) {
-        existingModal.remove();
-    }
-
-    // Create modal structure
-    const createEditBtnModal = document.createElement('div');
-    createEditBtnModal.setAttribute('class', 'modal fade');
-    createEditBtnModal.setAttribute('id', 'editGroupModal');
-    createEditBtnModal.setAttribute('tabindex', '-1');
-    createEditBtnModal.setAttribute('aria-labelledby', 'editGroupModalLabel');
-    createEditBtnModal.setAttribute('aria-hidden', 'true');
-
-    const createEditBtnModalDialog = document.createElement('div');
-    createEditBtnModalDialog.setAttribute('class', 'modal-dialog');
-
-    const createEditBtnModalDialogContent = document.createElement('div');
-    createEditBtnModalDialogContent.setAttribute('class', 'modal-content');
-
-    const createEditBtnModalDialogContentHeader = document.createElement('div');
-    createEditBtnModalDialogContentHeader.setAttribute('class', 'modal-header');
-
-    const createEditBtnModalDialogContentHeaderH5 = document.createElement('h5');
-    createEditBtnModalDialogContentHeaderH5.setAttribute('class', 'modal-title');
-    createEditBtnModalDialogContentHeaderH5.setAttribute('id', 'editGroupModalLabel');
-    createEditBtnModalDialogContentHeaderH5.textContent = 'Members';
-
-    const createEditBtnModalDialogContentHeaderBtn = document.createElement('button');
-    createEditBtnModalDialogContentHeaderBtn.setAttribute('class', 'btn-close');
-    createEditBtnModalDialogContentHeaderBtn.setAttribute('type', 'button');
-    createEditBtnModalDialogContentHeaderBtn.setAttribute('data-bs-dismiss', 'modal');
-    createEditBtnModalDialogContentHeaderBtn.setAttribute('aria-label', 'Close');
-
-    createEditBtnModalDialogContentHeader.appendChild(createEditBtnModalDialogContentHeaderH5);
-    createEditBtnModalDialogContentHeader.appendChild(createEditBtnModalDialogContentHeaderBtn);
-    createEditBtnModalDialogContent.appendChild(createEditBtnModalDialogContentHeader);
-
-    const createEditBtnModalDialogContentBody = document.createElement('div');
-    createEditBtnModalDialogContentBody.setAttribute('class', 'modal-body');
-    createEditBtnModalDialogContentBody.textContent = `Loading group members for: ${selectedGroup.name}...`;
-
-    createEditBtnModalDialogContent.appendChild(createEditBtnModalDialogContentBody);
-
-    const createEditBtnModalDialogContentFooter = document.createElement('div');
-    createEditBtnModalDialogContentFooter.setAttribute('class', 'modal-footer');
-
-    addMemberButton.setAttribute('class', 'btn btn-primary');
-    addMemberButton.textContent = 'Add members';
-    // addMemberButton.addEventListener('click', showAddMembersModal);
-
-    const exitGrpButton = document.createElement('button');
-    exitGrpButton.setAttribute('class', 'btn btn-danger');
-    exitGrpButton.textContent = 'Exit group';
-
-    createEditBtnModalDialogContentFooter.appendChild(addMemberButton);
-    createEditBtnModalDialogContentFooter.appendChild(exitGrpButton);
-    createEditBtnModalDialogContent.appendChild(createEditBtnModalDialogContentFooter);
-
-    createEditBtnModalDialog.appendChild(createEditBtnModalDialogContent);
-    createEditBtnModal.appendChild(createEditBtnModalDialog);
-
-    document.body.appendChild(createEditBtnModal); // Append to body or appropriate parent
-
-    // Show the modal
-    const modalInstance = new bootstrap.Modal(createEditBtnModal);
-    modalInstance.show(); 
-}
-
-function showGroupMembers() {
-    axios.get('/group/members', { params: { groupId: selectedGroup.id } })
-        .then(response => {
-            const { admin, users } = response.data;
-
-            // Find the modal body
-            const modalBody = document.querySelector('#editGroupModal .modal-body');
-
-            // Clear previous content
-            modalBody.innerHTML = '';
-
-            // Create the users list
-            const usersList = document.createElement('ul');
-            usersList.setAttribute('class', 'list-group');
-
-            users.forEach(user => {
-                const userItem = document.createElement('li');
-                userItem.setAttribute('class', 'list-group-item');
-                userItem.textContent = user;
-
-                // If the user is the admin, append "(Admin)" to the username
-                if (user === admin) {
-                    const adminBadge = document.createElement('span');
-                    adminBadge.setAttribute('class', 'badge bg-primary ms-2');
-                    adminBadge.textContent = 'Admin';
-                    userItem.appendChild(adminBadge);
-                }
-
-                usersList.appendChild(userItem);
-            });
-
-            modalBody.appendChild(usersList);
-        })
-        .catch(error => {
-            console.error(error);
-            const modalBody = document.querySelector('#editGroupModal .modal-body');
-            modalBody.innerHTML = 'Failed to load group members.';
-        });
+        .catch(err => showError(err.response?.data?.msg || 'Could not fetch chats :('));
 }
 
 function showGroups() {
-    axios.get(`/user/groups`, { headers: {Authorization: token} })
-        .then((res) => {
-            const groups = res.data.groups;
-            groups.forEach((group) => {
-                addGroupInDOM(group);
-            });
+    axios.get(`/user/groups`, { headers: { Authorization: token } })
+        .then(res => {
+            res.data.groups.forEach(addGroupInDOM);
+
+            // Select saved group after all groups are added to the DOM
+            const savedGroupId = localStorage.getItem('selectedGroupId');
+            if (savedGroupId) {
+                const savedGroupItem = groupList.querySelector(`[data-group-id="${savedGroupId}"]`);
+                if (savedGroupItem) {
+                    savedGroupItem.click();
+                } else {
+                    toggleCardAndImage(false);
+                }
+            } else {
+                toggleCardAndImage(false);
+            }
         })
-        .catch((err) => {
-            console.log(err);
-            showErrorInDOM('Could not fetch groups :(');
-        });
+        .catch(() => showError('Could not fetch groups :('));
 }
 
+
 function addGroupInDOM(group) {
-    const newGroupItem = document.createElement('li');
-    newGroupItem.classList.add('list-group-item', 'clickable');
-    newGroupItem.textContent = group.groupName;
-    newGroupItem.dataset.groupId = group.id; // Save the group ID for future reference
-    groupList.appendChild(newGroupItem);
-    $('#createGroupModal').modal('hide');
+    if (!groupList.querySelector(`[data-group-id="${group.id}"]`)) {
+        const groupItem = document.createElement('li');
+        groupItem.classList.add('list-group-item', 'clickable');
+        groupItem.dataset.groupId = group.id;
+        groupItem.textContent = group.groupName;
+        groupList.appendChild(groupItem);
+        $('#createGroupModal').modal('hide');
+    }
 }
 
 function createGroup(event) {
     event.preventDefault();
     const groupName = groupNameInput.value.trim();
-    if (!groupName) {
-        showErrorInDOM("Group name cannot be empty.");
-        return;
-    }
+    if (!groupName) return showError("Group name cannot be empty.");
 
-    // Collect selected user IDs
-    const selectedUsers = [];
-    const checkboxes = document.querySelectorAll('.form-check-input');
-    checkboxes.forEach((checkbox) => {
-        if (checkbox.checked) {
-            console.log(`Checkbox with ID ${checkbox.id} is checked`); // Debugging log
-            selectedUsers.push(checkbox.value); // Assuming the id is the username or user ID
-        } else {
-            console.log(`Checkbox with ID ${checkbox.id} is not checked`); // Debugging log
-        }
-    });
+    const selectedUsers = [...document.querySelectorAll('.form-check-input:checked')].map(cb => cb.value);
+    const group = { groupName, selectedUsers };
 
-    // Create the group object
-    const group = {
-        groupName,
-        selectedUsers: selectedUsers
-    };
-
-    console.log(group);
-
-    axios.post(`/user/createGroup`, group, { headers: {Authorization: token} })
-        .then((res) => {
-            const group = res.data;
-            addGroupInDOM(group);
-            showSuccessInDOM('Group Created!');
+    axios.post(`/user/createGroup`, group, { headers: { Authorization: token } })
+        .then(res => {
+            addGroupInDOM(res.data);
+            showSuccess('Group Created!');
             groupNameInput.value = '';
         })
-        .catch((err) => {
-            let msg = "Could not create group :(";
-            if (err.response && err.response.data && err.response.data.msg) {
-                msg = err.response.data.msg;
-            }
-            showErrorInDOM(msg);
-        });
+        .catch(err => showError(err.response?.data?.msg || 'Could not create group :('));
 }
 
 function showUsersInModal() {
-    axios.get(`/user/user`, { headers: {Authorization: token} })
-        .then((res) => {
-            const users = res.data.users;
+    axios.get(`/user/user`, { headers: { Authorization: token } })
+        .then(res => res.data.users.forEach(user => {
+            const userDiv = document.createElement('div');
+            userDiv.className = 'form-check';
+            userDiv.innerHTML = `
+                <input type="checkbox" class="form-check-input" id="${user.id}" value="${user.id}">
+                <label for="${user.id}" class="form-check-label">${user.username}</label>`;
+            modalFooterContainer.appendChild(userDiv);
+        }))
+        .catch(() => showError('Could not fetch users :('));
+}
 
-            users.forEach((user) => {
-                const modalFooterFormDiv = document.createElement('div');
-                modalFooterFormDiv.className = 'form-check';
+function editGroupModal() {
+    if (!selectedGroup) return;
+    document.getElementById('editGroupModal')?.remove();
+    const modalHTML = `
+        <div class="modal fade" id="editGroupModal" tabindex="-1" aria-labelledby="editGroupModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editGroupModalLabel">Members</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">Loading group members for: ${selectedGroup.name}...</div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary" id="addMemberButton">Add members</button>
+                        <button class="btn btn-danger" id="exitGroupButton">Exit group</button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    new bootstrap.Modal(document.getElementById('editGroupModal')).show();
+    showGroupMembers();
 
-                const modalFooterFormDivInput = document.createElement('input');
-                modalFooterFormDivInput.className = "form-check-input";
-                modalFooterFormDivInput.setAttribute('type', 'checkbox');
-                modalFooterFormDivInput.setAttribute('id', `${user.id}`);
-                modalFooterFormDivInput.setAttribute('value', `${user.id}`);
+    // Add event listener to the Exit Group button
+    document.getElementById('exitGroupButton').addEventListener('click', exitGroup);
+}
 
-                const modalFooterFormDivLabel = document.createElement('label');
-                modalFooterFormDivLabel.className = 'form-check-label';
-                modalFooterFormDivLabel.setAttribute('for', `${user.id}`);
-                modalFooterFormDivLabel.textContent = user.username;
+function exitGroup() {
+    if (!selectedGroup) return;
 
-                modalFooterFormDiv.appendChild(modalFooterFormDivInput);
-                modalFooterFormDiv.appendChild(modalFooterFormDivLabel);
-                modalFooterContainer.appendChild(modalFooterFormDiv);
-            });
-            $('#createGroupModal').modal('hide');
+    if (confirm('Are you sure you want to exit and delete this group?')) {
+        axios.delete(`/group/${selectedGroup.id}`, { headers: { Authorization: token } })
+            .then(() => {
+                showSuccess('Group deleted successfully');
+                localStorage.removeItem(`chats_${selectedGroup.id}`);
+                localStorage.removeItem('selectedGroupId');
+                window.location.reload();
+            })
+            .catch(err => showError(err.response?.data?.msg || 'Could not delete group :('));
+    }
+}
+
+
+function showGroupMembers() {
+    axios.get('/group/members', { params: { groupId: selectedGroup.id } })
+        .then(res => {
+            const { admin, users } = res.data;
+            const modalBody = document.querySelector('#editGroupModal .modal-body');
+            modalBody.innerHTML = users.map(user => `
+                <li class="list-group-item">${user}${user === admin ? '<span class="badge bg-primary ms-2">Admin</span>' : ''}</li>
+            `).join('');
         })
-        .catch((err) => {
-            console.log(err);
-            showErrorInDOM('Could not fetch users :(');
+        .catch(() => {
+            document.querySelector('#editGroupModal .modal-body').innerHTML = 'Failed to load group members.';
         });
 }
 
-
-// Other Functions
-function showUserInfoInDOM() {
-    usernameNav.innerText = username;
-}
-
 function logout() {
-    if (confirm('Are you sure you want to logout ?')) {
+    if (confirm('Are you sure you want to logout?')) {
         localStorage.clear();
         window.location.href = '/home';
     }
 }
 
 function parseJwt(token) {
-    var base64Url = token.split('.')[1];
-    var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    var jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-    }).join(''));
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => `%${('00' + c.charCodeAt(0).toString(16)).slice(-2)}`).join(''));
     return JSON.parse(jsonPayload);
 }
 
 // Event Listeners
 window.addEventListener('DOMContentLoaded', () => {
-    showUserInfoInDOM();
-    showMessage();
+    usernameNav.innerText = username;
     showGroups();
-    showUsersInModal()
-    editChatCardHeader.addEventListener('click', editBtn);
+    showUsersInModal();
+    editChatCardHeader.addEventListener('click', editGroupModal);
     sendBtn.addEventListener('click', addMessage);
     groupList.addEventListener('click', handleGroupListClick);
     newGroupForm.addEventListener('submit', createGroup);
     logoutBtn.addEventListener('click', logout);
 
-    const commonGroupItem = document.querySelector('#group-list .list-group-item:first-child');
-    if (commonGroupItem) {
-        commonGroupItem.click();
+    const savedGroupId = localStorage.getItem('selectedGroupId');
+    if (savedGroupId) {
+        const savedGroupItem = groupList.querySelector(`[data-group-id="${savedGroupId}"]`);
+        if (savedGroupItem) {
+            savedGroupItem.click();
+        } else {
+            toggleCardAndImage(false);
+        }
+    } else {
+        toggleCardAndImage(false);
     }
-    
+
+    // Add event listener for load more button
+    document.getElementById('load-more-btn').addEventListener('click', loadMoreMessages);
 });

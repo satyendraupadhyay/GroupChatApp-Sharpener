@@ -45,41 +45,22 @@ exports.postCreateGroup = async (req, res) => {
         const user = req.user;  // Assuming req.user contains the authenticated user
         const { groupName, selectedUsers } = req.body;
 
-        console.log('Request body:', req.body); // Log the request body
-
         if (!groupName) {
-            console.error('Group name is required');
             return res.status(400).json({ msg: 'Group name is required' });
         }
-
-        console.log('Creating group with name:', groupName);
 
         // Create the group
         const group = await Group.create({ groupName });
 
-        console.log('Group created with ID:', group.id);
-
         // Add the current user as the admin of the group
-        await Admin.create({
-            userId: user.id,
-            groupId: group.id
-        });
+        await Admin.create({ userId: user.id, groupId: group.id });
 
-        console.log('Admin created for group:', group.id, 'with user ID:', user.id);
+        // Ensure the admin is always included in the selected users
+        const uniqueUserIds = [...new Set([...selectedUsers, user.id])];
 
-        // Find the users by their IDs
-        const users = await User.findAll({
-            where: {
-                id: selectedUsers
-            }
-        });
-
-        console.log('Users found:', users.map(u => u.id));
-
-        // Add users to the group
+        // Find the users by their IDs and add them to the group
+        const users = await User.findAll({ where: { id: uniqueUserIds } });
         await group.addUsers(users);
-
-        console.log('Users added to group:', group.id);
 
         res.status(201).json(group);
     } catch (err) {
